@@ -1,0 +1,28 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.define :dhcp_server do |dhcp_server|
+    dhcp_server.vm.box = "centos/8"
+    dhcp_server.vm.box_version = "1905.1"
+    dhcp_server.vm.hostname = "DHCPServer"
+    dhcp_server.vm.network "public_network",:bridge=>"eth0"
+    dhcp_server.vm.network "private_network", ip: "192.168.20.2",
+      virtualbox__intnet: "internalnet"
+    dhcp_server.vm.provision "file", source: "./dhcpd.conf", destination: "/tmp/dhcpd.conf"
+    dhcp_server.vm.provision "shell", run: "always",  inline: <<-SHELL
+	dnf makecache && dnf install -y dhcp-server net-tools
+	cp /tmp/dhcpd.conf /etc/dhcp/dhcpd.conf
+    SHELL
+  end
+  config.vm.define :node_host do |node_host|
+    node_host.vm.box = "centos/8"
+    node_host.vm.box_version = "1905.1"
+    node_host.vm.hostname = "HostNode"
+    node_host.vm.network "private_network", type: "dhcp",
+      virtualbox__intnet: "internalnet"
+    node_host.vm.provision "shell", run: "always",  inline: <<-SHELL
+	dnf makecache && dnf install -y net-tools
+    SHELL
+  end
+end
